@@ -1,21 +1,28 @@
 import os
+import re
 from pdf2image import convert_from_path
 import tempfile
-from PIL import Image
+from PIL import Image, ImageEnhance
 import pytesseract
 
 def getStudentName(jpg_path):
-    
-    text = pytesseract.image_to_string(Image.open(jpg_path))
-    keyword = 'Nome'
-    pos = text.find('Nome')
-    
-    startName = pos + len(keyword)
-    endName = text.find('RG', startName)
+    image = Image.open(jpg_path)
 
-    fullName = text[startName:endName].strip()
-        
-    return fullName
+    enhancer = ImageEnhance.Contrast(image)
+    image = enhancer.enhance(2)
+
+    image = image.convert('L')
+    threshold = 90
+
+    text = pytesseract.image_to_string(image)
+
+    full_name = re.search("n?ome:\s*(.+?)(?:(?:(?:\\n)*i?RG:)|(?:\smatr[ií]cula:))", text, re.IGNORECASE)
+
+    if full_name is None:
+        return None
+    full_name = full_name.group(1)
+
+    return full_name
 
 def convert_first_page_to_img(file_path, save_path, pdf_path):
     file_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -26,19 +33,31 @@ def convert_first_page_to_img(file_path, save_path, pdf_path):
     images_from_path[0].save(image_path, 'JPEG')
     
     return image_path
-    
 
 root_dir = os.getcwd()
 folder = input('SELECIONE UMA PASTA:  ')
 save_path = os.path.join(folder, 'saved')
 os.makedirs(save_path, exist_ok=True)
-pdf_path = root_dir + '\\' + folder
+pdf_path = root_dir + '/' + folder
 pdf_list = os.scandir(pdf_path)
+
+success = 0
+failed = 0
 
 for file in pdf_list:
     if file.is_file() and file.name.lower().endswith('.pdf'):
         print('Convertendo arquivo', file.path)
         img_path = convert_first_page_to_img(file.path, save_path, pdf_path)
         student_name = getStudentName(img_path)
-        
-        os.rename(file.path, pdf_path + '\\' + student_name + '.pdf')
+        if student_name is not None:
+            print(f'Nome extraido do pdf: {student_name}')
+            os.rename(file.path, pdf_path + '/' + student_name + '.pdf')
+            success += 1
+        else:
+            print('Falha ao extrair nome do pdf')
+            failed += 1
+
+if success > 0:
+    print(f'Foram renomeados {success} arquivos')
+if failed > 0:
+    print(f'falha ao extrair o nome de {failed} arquivos')
