@@ -20,8 +20,9 @@ def getStudentName(jpg_path):
 
     if full_name is None:
         return None
-    full_name = full_name.group(1)
 
+    full_name = full_name.group(1)
+    full_name = full_name.replace(":", "").replace("_", "").replace("|", "").replace('[', "").replace("]", "").replace("*", "")
     return full_name
 
 def convert_first_page_to_img(file_path, save_path, pdf_path):
