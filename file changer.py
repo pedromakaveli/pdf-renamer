@@ -43,6 +43,7 @@ pdf_list = os.scandir(pdf_path)
 
 success = 0
 failed = 0
+count_names = 0
 
 for file in pdf_list:
     if file.is_file() and file.name.lower().endswith('.pdf'):
@@ -51,7 +52,8 @@ for file in pdf_list:
         student_name = getStudentName(img_path)
         if student_name is not None:
             print(f'Nome extraido do pdf: {student_name}')
-            os.rename(file.path, pdf_path + '/' + student_name + '.pdf')
+            count_names += 1
+            os.rename(file.path, pdf_path + '/' + student_name + str(count_names) + '.pdf')
             success += 1
         else:
             print('Falha ao extrair nome do pdf')
