@@ -36,8 +36,8 @@ def convert_first_page_to_img(file_path, save_path, pdf_path):
         "quality": 100
     },
     last_page = 1,
-    
     )
+    
     image_path = os.path.join(save_path, f'{file_name}_page1.jpg')
     images_from_path[0].save(image_path, 'JPEG')
     
