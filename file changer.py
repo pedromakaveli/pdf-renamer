@@ -29,7 +29,15 @@ def convert_first_page_to_img(file_path, save_path, pdf_path):
     file_name = os.path.splitext(os.path.basename(file_path))[0]
     file_name = file_name + '.pdf'
     
-    images_from_path = convert_from_path(file_path, fmt="jpeg")
+    images_from_path = convert_from_path(file_path, 
+    fmt="jpeg",
+    grayscale=True,
+    jpegopt={
+        "quality": 100
+    },
+    last_page = 1,
+    
+    )
     image_path = os.path.join(save_path, f'{file_name}_page1.jpg')
     images_from_path[0].save(image_path, 'JPEG')
     
