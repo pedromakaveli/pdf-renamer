@@ -16,14 +16,15 @@ def getStudentName(jpg_path):
 
     text = pytesseract.image_to_string(image)
 
-    full_name = re.search("n?ome:\s*(.+?)(?:(?:(?:\\n)*i?RG:)|(?:\smatr[ií]cula:))", text, re.IGNORECASE)
+    student_name_regex = r'n?o?me:\s*(.+?)(?:(?:(?:\n)*i?RG\b)|(?:\s[lm]?atr[ií]?cula))'
 
-    if full_name is None:
+    likely_student_name = re.search(student_name_regex, text, re.IGNORECASE)
+    if likely_student_name is None:
+        print("ERRO: Não foi possível extrair o nome do  estudante...")
         return None
 
-    full_name = full_name.group(1)
-    full_name = full_name.replace(":", "").replace("_", "").replace("|", "").replace('[', "").replace("]", "").replace("*", "")
-    return full_name
+    sanitize_name = lambda name: re.sub(r'[^\w\s]|\s{2,}|[\d_]', '', name).upper().strip()
+    return sanitize_name(likely_student_name.group(1))
 
 def convert_first_page_to_img(file_path, save_path, pdf_path):
     file_name = os.path.splitext(os.path.basename(file_path))[0]
@@ -37,7 +38,7 @@ def convert_first_page_to_img(file_path, save_path, pdf_path):
     },
     last_page = 1,
     )
-    
+
     image_path = os.path.join(save_path, f'{file_name}_page1.jpg')
     images_from_path[0].save(image_path, 'JPEG')
     
