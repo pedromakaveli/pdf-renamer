@@ -1,20 +1,10 @@
 import os
 import re
 from pdf2image import convert_from_path
-import tempfile
-from PIL import Image, ImageEnhance
 import pytesseract
 
-def getStudentName(jpg_path):
-    image = Image.open(jpg_path)
-
-    enhancer = ImageEnhance.Contrast(image)
-    image = enhancer.enhance(2)
-
-    image = image.convert('L')
-    threshold = 90
-
-    text = pytesseract.image_to_string(image)
+def getStudentName(jpeg):
+    text = pytesseract.image_to_string(jpeg, lang="por")
 
     student_name_regex = r'n?o?me:\s*(.+?)(?:(?:(?:\n)*i?RG\b)|(?:\s[lm]?atr[ií]?cula))'
 
@@ -26,11 +16,8 @@ def getStudentName(jpg_path):
     sanitize_name = lambda name: re.sub(r'[^\w\s]|\s{2,}|[\d_]', '', name).upper().strip()
     return sanitize_name(likely_student_name.group(1))
 
-def convert_first_page_to_img(file_path, save_path, pdf_path):
-    file_name = os.path.splitext(os.path.basename(file_path))[0]
-    file_name = file_name + '.pdf'
-    
-    images_from_path = convert_from_path(file_path, 
+def convert_first_page_to_img(pdf_path):
+    jpeg = convert_from_path(pdf_path,
     fmt="jpeg",
     grayscale=True,
     jpegopt={
@@ -38,36 +25,39 @@ def convert_first_page_to_img(file_path, save_path, pdf_path):
     },
     last_page = 1,
     )
-
-    image_path = os.path.join(save_path, f'{file_name}_page1.jpg')
-    images_from_path[0].save(image_path, 'JPEG')
     
-    return image_path
+    return jpeg[0]
 
-root_dir = os.getcwd()
-folder = input('SELECIONE UMA PASTA:  ')
-save_path = os.path.join(folder, 'saved')
-os.makedirs(save_path, exist_ok=True)
-pdf_path = root_dir + '/' + folder
-pdf_list = os.scandir(pdf_path)
+folder = input('SELECIONE UMA PASTA: ').strip()
+
+pdfs_list = []
+pdfs_dir = os.scandir(folder)
+
+for file in pdfs_dir:
+    if file.is_file() and file.name.lower().endswith('.pdf'):
+        pdfs_list.append(file.path)
+    else:
+        print(f"O arquivo {file.path} não é um PDF")
 
 success = 0
 failed = 0
 count_names = 0
+pdf_count = len(pdfs_list)
 
-for file in pdf_list:
-    if file.is_file() and file.name.lower().endswith('.pdf'):
-        print('Convertendo arquivo', file.path)
-        img_path = convert_first_page_to_img(file.path, save_path, pdf_path)
-        student_name = getStudentName(img_path)
-        if student_name is not None:
-            print(f'Nome extraido do pdf: {student_name}')
-            count_names += 1
-            os.rename(file.path, pdf_path + '/' + student_name + str(count_names) + '.pdf')
-            success += 1
-        else:
-            print('Falha ao extrair nome do pdf')
-            failed += 1
+print(f"\nQuantidade de PDFS encontrados: {pdf_count} \n")
+
+for pdf in pdfs_list:
+    print('Convertendo arquivo', pdf)
+    jpeg = convert_first_page_to_img(pdf)
+    student_name = getStudentName(jpeg)
+    if student_name is not None:
+        print(f'Nome extraido do pdf: {student_name}')
+        count_names += 1
+        os.rename(pdf, os.path.join(os.path.dirname(pdf), student_name + str(count_names) + '.pdf'))
+        success += 1
+    else:
+        print('Falha ao extrair nome do pdf')
+        failed += 1
 
 if success > 0:
     print(f'Foram renomeados {success} arquivos')
